@@ -99,7 +99,7 @@ class TransifexAPI(object):
         if response.status_code != requests.codes['OK']:
             raise TransifexAPIException(response)
 
-        return json.loads(response.content)
+        return json.loads(codecs.decode(response.content, 'utf-8'))
 
     def new_resource(self, project_slug, path_to_pofile, resource_slug=None,
                      resource_name=None):
@@ -181,7 +181,7 @@ class TransifexAPI(object):
         if response.status_code != requests.codes['OK']:
             raise TransifexAPIException(response)
         else:
-            return json.loads(response.content)
+            return json.loads(codecs.decode(response.content, 'utf-8'))
 
     def delete_resource(self, project_slug, resource_slug):
         """
@@ -239,7 +239,7 @@ class TransifexAPI(object):
         if response.status_code != requests.codes['OK']:
             raise TransifexAPIException(response)
         else:
-            return json.loads(response.content)
+            return json.loads(codecs.decode(response.content, 'utf-8'))
 
     def get_translation(self, project_slug, resource_slug, language_code,
                         path_to_pofile):
@@ -301,7 +301,7 @@ class TransifexAPI(object):
         if response.status_code != requests.codes['OK']:
             raise TransifexAPIException(response)
 
-        content = json.loads(response.content)
+        content = json.loads(codecs.decode(response.content, 'utf-8'))
         languages = [
             language['code'] for language in content['available_languages']
         ]
@@ -348,7 +348,7 @@ class TransifexAPI(object):
         if response.status_code != requests.codes['OK']:
             raise TransifexAPIException(response)
         else:
-            return json.loads(response.content)
+            return json.loads(codecs.decode(response.content, 'utf-8'))
 
 
 
@@ -366,7 +366,7 @@ class TransifexAPI(object):
         if response.status_code != requests.codes['OK']:
             raise TransifexAPIException(response)
         else:
-            return json.loads(response.content)
+            return json.loads(codecs.decode(response.content, 'utf-8'))
 
     def put_translation_string(self, project_slug, resource_slug,
                                language_code, entity, translation,

@@ -1,5 +1,10 @@
 import re
 from hashlib import md5
+import sys
+
+# python 3 compability hack
+if sys.version_info >= (3,):
+    unicode = str
 
 
 def force_unicode(s, encoding='utf-8'):
@@ -22,7 +27,7 @@ def slugify(value):
     """
     import unicodedata
     value = force_unicode(value)
-    value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore')
+    value = unicodedata.normalize('NFKD', value)
     value = unicode(re.sub('[^\w\s-]', '', value).strip().lower())
     return re.sub('[-\s]+', '-', value)
 
