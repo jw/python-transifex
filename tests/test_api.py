@@ -3,7 +3,7 @@ from transifex.api import TransifexAPI
 from mock import patch, Mock, MagicMock
 import json
 from transifex.exceptions import InvalidSlugException, TransifexAPIException
-
+import unittest.mock as um
 
 
 def _check_for_new_project_kwargs(*args, **kwargs):
@@ -138,42 +138,43 @@ class TransifexAPITest(TestCase):
             TransifexAPIException, self.api.list_resources, project_slug='abc'
         )
 
-    @patch('__builtin__.open', create=True)
     @patch('requests.post')
-    def test_new_resource(self, mock_requests, mock_open):
+    def test_new_resource(self, mock_requests):
         """
         Test the `new_resource` api call
         """
-        file_contents = 'aaaaaa\nggggg'
-        mock_open.return_value = MagicMock(spec=file)
-        mock_open.return_value.read = lambda: file_contents
+        with um.patch('builtins.open', um.mock_open(read_data='aaaaaa\nggggg')):
 
-        required_post_params = ['name', 'slug', 'content', 'i18n_type']
-        def side_effect(*args, **kwargs):
-            response = Mock()
-            response.status_code = 201
-            data = json.loads(kwargs.get('data', "{}"))
-            for param in required_post_params:
-                if param not in data:
-                    response.status_code = 400
-                    response.content = '%r is required'
-                    break
+            # file_contents = ''
+            # mock_open.return_value = MagicMock(spec=file)
+            # mock_open.return_value.read = lambda: file_contents
 
-            return response
+            required_post_params = ['name', 'slug', 'content', 'i18n_type']
+            def side_effect(*args, **kwargs):
+                response = Mock()
+                response.status_code = 201
+                data = json.loads(kwargs.get('data', "{}"))
+                for param in required_post_params:
+                    if param not in data:
+                        response.status_code = 400
+                        response.content = '%r is required'
+                        break
 
-        mock_requests.side_effect = side_effect
+                return response
 
-        self.api.new_resource(
-            project_slug='abc', path_to_pofile='/abc/pofile.po'
-        )
-        self.assertTrue(mock_requests.called)
-        __, kwargs = mock_requests.call_args
-        self.assertTrue('data' in kwargs)
-        data = json.loads(kwargs['data'])
-        self.assertEqual(data['content'], file_contents)
+            mock_requests.side_effect = side_effect
+
+            self.api.new_resource(
+                project_slug='abc', path_to_pofile='/abc/pofile.po'
+            )
+            self.assertTrue(mock_requests.called)
+            __, kwargs = mock_requests.call_args
+            self.assertTrue('data' in kwargs)
+            data = json.loads(kwargs['data'])
+            self.assertEqual(data['content'], 'aaaaaa\nggggg')
 
 
-    @patch('__builtin__.open', create=True)
+    @patch('builtins.open', create=True)
     def test_new_resource_file_not_found(self, mock_open):
         """
         Test the `new_resource` api call when the pofile cannot be found
@@ -186,113 +187,105 @@ class TransifexAPITest(TestCase):
             project_slug='abc', path_to_pofile='/aaa/file.po'
         )
 
-    @patch('__builtin__.open', create=True)
-    def test_new_resource_bad_slug(self, mock_open):
+    # @patch('builtins.open', create=True)
+    def test_new_resource_bad_slug(self):
         """
         Test the `new_resource` api call when the slug is invalid
         """
-        file_contents = 'aaaaaa\nggggg'
-        mock_open.return_value = MagicMock(spec=file)
-        mock_open.return_value.read = lambda: file_contents
+        with patch('builtins.open', um.mock_open(read_data='aaaaaa\nggggg')) as m:
 
-        self.assertRaises(InvalidSlugException, self.api.new_resource,
-            project_slug='aaa', resource_slug='.', path_to_pofile='/aaa/file.po'
-        )
-        self.assertRaises(InvalidSlugException, self.api.new_resource,
-            project_slug='aaa', resource_slug='/', path_to_pofile='/aaa/file.po'
-        )
-        self.assertRaises(InvalidSlugException, self.api.new_resource,
-            project_slug='aaa', resource_slug='%@$',
-            path_to_pofile='/aaa/file.po'
-        )
+            self.assertRaises(InvalidSlugException, self.api.new_resource,
+                project_slug='aaa', resource_slug='.', path_to_pofile='/aaa/file.po'
+            )
+            self.assertRaises(InvalidSlugException, self.api.new_resource,
+                project_slug='aaa', resource_slug='/', path_to_pofile='/aaa/file.po'
+            )
+            self.assertRaises(InvalidSlugException, self.api.new_resource,
+                project_slug='aaa', resource_slug='%@$',
+                path_to_pofile='/aaa/file.po'
+            )
 
-    @patch('__builtin__.open', create=True)
+    # @patch('builtins.open', create=True)
     @patch('requests.post')
-    def test_new_resource_server_error(self, mock_requests, mock_open):
+    def test_new_resource_server_error(self, mock_requests):
         """
         Test the `new_resource` api call when the transifex server returns an
         error
         """
-        file_contents = 'aaaaaa\nggggg'
-        mock_open.return_value = MagicMock(spec=file)
-        mock_open.return_value.read = lambda: file_contents
+        with patch('builtins.open', um.mock_open(read_data='aaaaaa\nggggg')) as m:
 
-        def side_effect(*args, **kwargs):
-            response = Mock()
-            response.status_code = 404
-            return response
+            def side_effect(*args, **kwargs):
+                response = Mock()
+                response.status_code = 404
+                return response
 
-        mock_requests.side_effect = side_effect
-        self.assertRaises(
-            TransifexAPIException, self.api.new_resource,
-            project_slug='abc', path_to_pofile='/aaa/file.po'
-        )
+            mock_requests.side_effect = side_effect
 
-    @patch('__builtin__.open', create=True)
+            self.assertRaises(
+                TransifexAPIException, self.api.new_resource,
+                project_slug='abc', path_to_pofile='/aaa/file.po'
+            )
+
     @patch('requests.post')
-    def test_new_resource_with_optional_args(self, mock_requests, mock_open):
+    def test_new_resource_with_optional_args(self, mock_requests):
         """
         Test the `new_resource` api call with the optional args
         """
-        file_contents = 'aaaaaa\nggggg'
-        mock_open.return_value = MagicMock(spec=file)
-        mock_open.return_value.read = lambda: file_contents
+        with patch('builtins.open', um.mock_open(read_data='aaaaaa\nggggg')) as m:
 
-        required_post_params = ['name', 'slug', 'content', 'i18n_type']
-        def side_effect(*args, **kwargs):
-            response = Mock()
-            response.status_code = 201
-            data = json.loads(kwargs.get('data', "{}"))
-            for param in required_post_params:
-                if param not in data:
-                    response.status_code = 400
-                    response.content = '%r is required'
-                    break
+            required_post_params = ['name', 'slug', 'content', 'i18n_type']
+            def side_effect(*args, **kwargs):
+                response = Mock()
+                response.status_code = 201
+                data = json.loads(kwargs.get('data', "{}"))
+                for param in required_post_params:
+                    if param not in data:
+                        response.status_code = 400
+                        response.content = '%r is required'
+                        break
 
-            return response
+                return response
 
-        mock_requests.side_effect = side_effect
+            mock_requests.side_effect = side_effect
 
-        self.api.new_resource(
-            project_slug='abc', path_to_pofile='/abc/pofile.po',
-            resource_slug='def', resource_name='A Name'
-        )
-        self.assertTrue(mock_requests.called)
+            self.api.new_resource(
+                project_slug='abc', path_to_pofile='/abc/pofile.po',
+                resource_slug='def', resource_name='A Name'
+            )
 
-    @patch('__builtin__.open', create=True)
+            self.assertTrue(mock_requests.called)
+
     @patch('requests.put')
-    def test_update_source_translation(self, mock_requests, mock_open):
+    def test_update_source_translation(self, mock_requests):
         """
         Test the `update_source_translation` api call
         """
-        file_contents = 'aaaaaa\nggggg'
-        mock_open.return_value = MagicMock(spec=file)
-        mock_open.return_value.read = lambda: file_contents
+        with patch('builtins.open', um.mock_open(read_data='aaaaaa\nggggg')) as m:
 
-        required_post_params = ['content', ]
-        def side_effect(*args, **kwargs):
-            response = Mock()
-            data = json.loads(kwargs.get('data', "{}"))
-            for param in required_post_params:
-                if param not in data:
-                    response.status_code = 400
-                    response.content = '%r is required'
-                    return response
+            required_post_params = ['content', ]
+            def side_effect(*args, **kwargs):
+                response = Mock()
+                data = json.loads(kwargs.get('data', "{}"))
+                for param in required_post_params:
+                    if param not in data:
+                        response.status_code = 400
+                        response.content = '%r is required'
+                        return response
 
-            response.status_code = 200
-            response.content = json.dumps({'a':1})
-            return response
+                response.status_code = 200
+                response.content = json.dumps({'a':1})
+                return response
 
-        mock_requests.side_effect = side_effect
+            mock_requests.side_effect = side_effect
 
-        self.api.update_source_translation(
-            project_slug='abc', resource_slug='def',
-            path_to_pofile='/abc/pofile.po'
-        )
-        self.assertTrue(mock_requests.called)
+            self.api.update_source_translation(
+                project_slug='abc', resource_slug='def',
+                path_to_pofile='/abc/pofile.po'
+            )
+            self.assertTrue(mock_requests.called)
 
 
-    @patch('__builtin__.open', create=True)
+    @patch('builtins.open', create=True)
     def test_update_source_translation_file_not_found(self, mock_open):
         """
         Test the `update_source_translation` api call when the pofile cannot be found
@@ -306,64 +299,57 @@ class TransifexAPITest(TestCase):
             path_to_pofile='/aaa/file.po'
         )
 
-    @patch('__builtin__.open', create=True)
     @patch('requests.put')
-    def test_update_source_translation_server_error(self, mock_requests,
-                                                    mock_open):
+    def test_update_source_translation_server_error(self, mock_requests):
         """
         Test the `update_source_translation` api call when the transifex server
         returns an error
         """
-        file_contents = 'aaaaaa\nggggg'
-        mock_open.return_value = MagicMock(spec=file)
-        mock_open.return_value.read = lambda: file_contents
+        with patch('builtins.open', um.mock_open(read_data='aaaaaa\nggggg')) as m:
 
-        def side_effect(*args, **kwargs):
-            response = Mock()
-            response.status_code = 404
-            return response
+            def side_effect(*args, **kwargs):
+                response = Mock()
+                response.status_code = 404
+                return response
 
-        mock_requests.side_effect = side_effect
-        self.assertRaises(
-            TransifexAPIException, self.api.update_source_translation,
-            project_slug='abc', resource_slug='def',
-            path_to_pofile='/aaa/file.po'
-        )
+            mock_requests.side_effect = side_effect
+            self.assertRaises(
+                TransifexAPIException, self.api.update_source_translation,
+                project_slug='abc', resource_slug='def',
+                path_to_pofile='/aaa/file.po'
+            )
 
-    @patch('__builtin__.open', create=True)
     @patch('requests.put')
-    def test_new_translation(self, mock_requests, mock_open):
+    def test_new_translation(self, mock_requests):
         """
         Test the `new_translation` api call
         """
-        file_contents = 'aaaaaa\nggggg'
-        mock_open.return_value = MagicMock(spec=file)
-        mock_open.return_value.read = lambda: file_contents
+        with patch('builtins.open', um.mock_open(read_data='aaaaaa\nggggg')) as m:
 
-        required_post_params = ['content', ]
-        def side_effect(*args, **kwargs):
-            response = Mock()
-            data = json.loads(kwargs.get('data', "{}"))
-            for param in required_post_params:
-                if param not in data:
-                    response.status_code = 400
-                    response.content = '%r is required'
-                    return response
+            required_post_params = ['content', ]
+            def side_effect(*args, **kwargs):
+                response = Mock()
+                data = json.loads(kwargs.get('data', "{}"))
+                for param in required_post_params:
+                    if param not in data:
+                        response.status_code = 400
+                        response.content = '%r is required'
+                        return response
 
-            response.status_code = 200
-            response.content = json.dumps({'s':1})
-            return response
+                response.status_code = 200
+                response.content = json.dumps({'s':1})
+                return response
 
-        mock_requests.side_effect = side_effect
+            mock_requests.side_effect = side_effect
 
-        self.api.new_translation(
-            project_slug='abc', resource_slug='def', language_code='pt',
-            path_to_pofile='/abc/pofile.po'
-        )
-        self.assertTrue(mock_requests.called)
+            self.api.new_translation(
+                project_slug='abc', resource_slug='def', language_code='pt',
+                path_to_pofile='/abc/pofile.po'
+            )
+            self.assertTrue(mock_requests.called)
 
 
-    @patch('__builtin__.open', create=True)
+    @patch('builtins.open', create=True)
     def test_new_translation_file_not_found(self, mock_open):
         """
         Test the `new_translation` api call when the pofile cannot be found
@@ -377,37 +363,32 @@ class TransifexAPITest(TestCase):
             path_to_pofile='/aaa/file.po'
         )
 
-    @patch('__builtin__.open', create=True)
     @patch('requests.put')
-    def test_new_translation_server_error(self, mock_requests,
-                                                    mock_open):
+    def test_new_translation_server_error(self, mock_requests):
         """
         Test the `new_translation` api call when the transifex server
         returns an error
         """
-        file_contents = 'aaaaaa\nggggg'
-        mock_open.return_value = MagicMock(spec=file)
-        mock_open.return_value.read = lambda: file_contents
+        with patch('builtins.open', um.mock_open(read_data='aaaaaa\nggggg')) as m:
 
-        def side_effect(*args, **kwargs):
-            response = Mock()
-            response.status_code = 404
-            return response
+            def side_effect(*args, **kwargs):
+                response = Mock()
+                response.status_code = 404
+                return response
 
-        mock_requests.side_effect = side_effect
-        self.assertRaises(
-            TransifexAPIException, self.api.new_translation,
-            project_slug='abc', resource_slug='def', language_code='pt',
-            path_to_pofile='/aaa/file.po'
-        )
+            mock_requests.side_effect = side_effect
+            self.assertRaises(
+                TransifexAPIException, self.api.new_translation,
+                project_slug='abc', resource_slug='def', language_code='pt',
+                path_to_pofile='/aaa/file.po'
+            )
 
-    @patch('__builtin__.open', create=True)
+    @patch('builtins.open', create=True)
     @patch('requests.get')
     def test_get_translation(self, mock_requests, mock_open):
         """
         Test the `get_translation` api call
         """
-        mock_open.return_value = MagicMock(spec=file)
 
         def side_effect(*args, **kwargs):
             mock_response = Mock()
@@ -424,7 +405,7 @@ class TransifexAPITest(TestCase):
         self.assertTrue(mock_requests.called)
 
 
-    @patch('__builtin__.open', create=True)
+    @patch('builtins.open', create=True)
     @patch('requests.get')
     def test_get_translation_file_not_found(self, mock_requests, mock_open):
         """

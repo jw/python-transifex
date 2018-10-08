@@ -15,7 +15,6 @@ class TransifexAPI(object):
         @param password the password to use when connecting
         @param host the host string
         """
-        #TODO: make host optional
         self._username = username
         self._password = password
         self._host = host
@@ -76,6 +75,16 @@ class TransifexAPI(object):
         if response.status_code != requests.codes['CREATED']:
             raise TransifexAPIException(response)
 
+    def list_projects(self):
+        url = '%s/projects/' % (self._base_api_url)
+        response = requests.get(url, auth=self._auth)
+        response.raise_for_status()
+
+        if response.status_code != requests.codes['OK']:
+            raise TransifexAPIException(response)
+
+        return response.json()
+
     def list_resources(self, project_slug):
         """
         List all resources in a project
@@ -99,7 +108,7 @@ class TransifexAPI(object):
         if response.status_code != requests.codes['OK']:
             raise TransifexAPIException(response)
 
-        return json.loads(codecs.decode(response.content, 'utf-8'))
+        return response.json()
 
     def new_resource(self, project_slug, path_to_pofile, resource_slug=None,
                      resource_name=None):
@@ -181,7 +190,7 @@ class TransifexAPI(object):
         if response.status_code != requests.codes['OK']:
             raise TransifexAPIException(response)
         else:
-            return json.loads(codecs.decode(response.content, 'utf-8'))
+            return json.loads(response.content)
 
     def delete_resource(self, project_slug, resource_slug):
         """
@@ -239,7 +248,7 @@ class TransifexAPI(object):
         if response.status_code != requests.codes['OK']:
             raise TransifexAPIException(response)
         else:
-            return json.loads(codecs.decode(response.content, 'utf-8'))
+            return json.loads(response.content)
 
     def get_translation(self, project_slug, resource_slug, language_code,
                         path_to_pofile):
@@ -301,7 +310,7 @@ class TransifexAPI(object):
         if response.status_code != requests.codes['OK']:
             raise TransifexAPIException(response)
 
-        content = json.loads(codecs.decode(response.content, 'utf-8'))
+        content = json.loads(response.content)
         languages = [
             language['code'] for language in content['available_languages']
         ]
@@ -348,7 +357,7 @@ class TransifexAPI(object):
         if response.status_code != requests.codes['OK']:
             raise TransifexAPIException(response)
         else:
-            return json.loads(codecs.decode(response.content, 'utf-8'))
+            return json.loads(response.content)
 
 
 
@@ -366,7 +375,7 @@ class TransifexAPI(object):
         if response.status_code != requests.codes['OK']:
             raise TransifexAPIException(response)
         else:
-            return json.loads(codecs.decode(response.content, 'utf-8'))
+            return json.loads(response.content)
 
     def put_translation_string(self, project_slug, resource_slug,
                                language_code, entity, translation,
@@ -397,4 +406,5 @@ class TransifexAPI(object):
         """
         url = '%s/projects/' % (self._base_api_url)
         response = requests.get(url, auth=self._auth)
+        print(response.text)
         return response.status_code == requests.codes['OK']
